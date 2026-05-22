@@ -5,7 +5,7 @@ Run: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import chat, news, wellness, alert, medicine, reminder, voice
+from routers import chat, news, wellness, alert, medicine, reminder, voice, contacts
 
 app = FastAPI(
     title="ElderWise AI API",
@@ -30,6 +30,7 @@ app.include_router(alert.router)
 app.include_router(medicine.router)
 app.include_router(reminder.router)
 app.include_router(voice.router)
+app.include_router(contacts.router)
 
 
 # ── Health check ─────────────────────────────────────────────────
