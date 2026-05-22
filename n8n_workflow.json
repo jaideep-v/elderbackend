@@ -1,0 +1,141 @@
+{
+  "name": "ElderWise - Low Medicine Stock Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "elderwise-low-stock",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "elderwise-low-stock"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split contacts into individual items with personalized messages\nconst data = $input.first().json.body || $input.first().json;\n\nconst userName = data.user_name || 'your elder';\nconst medicineName = data.medicine_name || 'medicine';\nconst daysRemaining = data.days_remaining || 0;\nconst stockCount = data.stock_count || 0;\nconst contacts = data.contacts || [];\nconst backendUrl = data.backend_url || 'http://localhost:8001';\n\nconst items = [];\n\nfor (const contact of contacts) {\n  let message = '';\n  const rel = (contact.relationship || '').toLowerCase();\n\n  if (rel === 'doctor' || rel === 'physician') {\n    message = `Dr. ${contact.name}, this is an automated alert from ElderWise health companion.\\n\\n` +\n      `Your patient ${userName}'s ${medicineName} supply is running low — only ${daysRemaining} days remaining (${stockCount} units in stock).\\n\\n` +\n      `A prescription refill may be needed. Please advise at your earliest convenience.`;\n  } else {\n    message = `Hi ${contact.name}, this is an automated alert from ElderWise.\\n\\n` +\n      `${userName}'s ${medicineName} stock is running low — only ${daysRemaining} days left (${stockCount} units remaining).\\n\\n` +\n      `Please help arrange a refill soon. Thank you for caring! 💙`;\n  }\n\n  items.push({\n    json: {\n      phone: contact.phone,\n      name: contact.name,\n      relationship: contact.relationship,\n      message: message,\n      backend_url: backendUrl\n    }\n  });\n}\n\nif (items.length === 0) {\n  items.push({\n    json: {\n      skip: true,\n      reason: 'No contacts provided'\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "format-messages",
+      "name": "Format Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "filter-valid",
+      "name": "Filter Valid Contacts",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.backend_url }}/api/alert/whatsapp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.phone }}\",\n  \"message\": \"{{ $json.message }}\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp via Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Summarize results\nconst results = $input.all();\nconst sent = results.filter(r => r.json.sent === true).length;\nconst failed = results.length - sent;\n\nreturn [{\n  json: {\n    total_contacts: results.length,\n    messages_sent: sent,\n    messages_failed: failed,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "summary",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Messages": {
+      "main": [
+        [
+          {
+            "node": "Filter Valid Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Valid Contacts": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp via Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp via Backend": {
+      "main": [
+        [
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "ElderWise"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
