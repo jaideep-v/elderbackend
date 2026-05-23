@@ -50,50 +50,64 @@ def _user_out(row: dict) -> dict:
 async def register(body: RegisterIn) -> dict:
     db = get_supabase_client()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(503, detail="Database unavailable")
 
-    # check duplicate email
-    existing = db.table("users").select("id").eq("email", body.email).execute()
-    if existing.data:
-        raise HTTPException(409, "Email already registered")
+    try:
+        existing = db.table("users").select("id").eq("email", body.email).execute()
+        if existing.data:
+            raise HTTPException(409, detail="Email already registered")
 
-    pw_hash = _hash(body.password)
-    result = (
-        db.table("users")
-        .insert({"name": body.name, "email": body.email, "password_hash": pw_hash})
-        .execute()
-    )
-    if not result.data:
-        raise HTTPException(500, "Failed to create account")
+        pw_hash = _hash(body.password)
+        result = (
+            db.table("users")
+            .insert({"name": body.name, "email": body.email, "password_hash": pw_hash})
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(500, detail="Failed to create account")
 
-    return _user_out(result.data[0])
+        return _user_out(result.data[0])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Registration error: {str(e)}")
 
 
 @router.post("/login")
 async def login(body: LoginIn) -> dict:
     db = get_supabase_client()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(503, detail="Database unavailable")
 
-    result = db.table("users").select("*").eq("email", body.email).execute()
-    if not result.data:
-        raise HTTPException(401, "Invalid email or password")
+    try:
+        result = db.table("users").select("*").eq("email", body.email).execute()
+        if not result.data:
+            raise HTTPException(401, detail="Invalid email or password")
 
-    user = result.data[0]
-    if not _verify(body.password, user["password_hash"]):
-        raise HTTPException(401, "Invalid email or password")
+        user = result.data[0]
+        if not _verify(body.password, user["password_hash"]):
+            raise HTTPException(401, detail="Invalid email or password")
 
-    return _user_out(user)
+        return _user_out(user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Login error: {str(e)}")
 
 
 @router.get("/profile")
 async def get_profile(user_id: str) -> dict:
     db = get_supabase_client()
     if not db:
-        raise HTTPException(503, "Database unavailable")
+        raise HTTPException(503, detail="Database unavailable")
 
-    result = db.table("users").select("*").eq("id", user_id).execute()
-    if not result.data:
-        raise HTTPException(404, "User not found")
+    try:
+        result = db.table("users").select("*").eq("id", user_id).execute()
+        if not result.data:
+            raise HTTPException(404, detail="User not found")
 
-    return _user_out(result.data[0])
+        return _user_out(result.data[0])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Profile error: {str(e)}")
