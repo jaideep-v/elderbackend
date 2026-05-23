@@ -123,6 +123,7 @@ async def agent_chat(body: AgentChatRequest) -> AgentChatResponse:
         user_id=body.user_id,
         message=body.message,
         chat_history=body.chat_history,
+        language=body.language,
     )
     return AgentChatResponse(
         response=result["response"],

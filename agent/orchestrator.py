@@ -16,7 +16,7 @@ _CONFIRM_NO  = {"no", "nope", "cancel", "stop", "never mind", "don't", "dont",
                 "illa", "venda", "cancel it"}
 
 
-async def process_agent_message(user_id: str, message: str, chat_history: list, *, voice_mode: bool = False) -> dict:
+async def process_agent_message(user_id: str, message: str, chat_history: list, *, voice_mode: bool = False, language: str = "en") -> dict:
     """
     Returns:
         {response: str, action_taken: bool, active_intent: str | None}
@@ -125,7 +125,7 @@ async def process_agent_message(user_id: str, message: str, chat_history: list, 
     # ── CASE 4: General chat / queries ────────────────────────────────────
     session.reset()
     user_context  = await build_user_context(user_id)
-    system_prompt = get_voice_prompt(user_context) if voice_mode else get_contextual_prompt(user_context)
+    system_prompt = get_voice_prompt(user_context, language=language) if voice_mode else get_contextual_prompt(user_context, language=language)
     messages = [{"role": "system", "content": system_prompt}]
     for turn in chat_history[-10:]:
         if turn.get("role") in ("user", "assistant") and turn.get("content"):
