@@ -6,7 +6,7 @@ Returns user_id + profile on success (no JWT for simplicity — user_id is the s
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from services.supabase_service import get_supabase_client
 
@@ -27,12 +27,12 @@ except ImportError:
 
 class RegisterIn(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     password: str
 
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
