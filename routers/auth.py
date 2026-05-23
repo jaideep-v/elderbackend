@@ -15,11 +15,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # ── lazy import passlib so startup never fails even if optional ────
 try:
     from passlib.context import CryptContext
-    _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    _pwd = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
     _hash   = lambda p: _pwd.hash(p)
     _verify = lambda p, h: _pwd.verify(p, h)
 except ImportError:
-    import hashlib, hmac as _hmac
+    import hashlib
     _SECRET = b"elderwise-fallback"
     _hash   = lambda p: hashlib.sha256(_SECRET + p.encode()).hexdigest()
     _verify = lambda p, h: _hash(p) == h
